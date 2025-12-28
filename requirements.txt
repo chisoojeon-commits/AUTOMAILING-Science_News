@@ -1,0 +1,4 @@
+requests
+feedparser
+google-generativeai
+urllib3
