@@ -15,7 +15,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 SENDER_EMAIL = os.environ.get('SENDER_EMAIL')
 SENDER_PASSWORD = os.environ.get('SENDER_PASSWORD')
-RECEIVER_EMAIL = os.environ.get('RECEIVER_EMAIL')
+receiver_raw = os.environ.get('RECEIVER_EMAIL', '')
+receiver_list = [email.strip() for email in receiver_raw.replace(';', ',').split(',') if email.strip()]
 
 # 2. 이메일 설정 (Gmail 권장)
 SMTP_SERVER = "smtp.gmail.com"
@@ -123,15 +124,15 @@ def send_email(html_body):
     msg = MIMEMultipart()
     msg['Subject'] = f"🔬 오늘의 과학 리포트 ({datetime.now().strftime('%m/%d')})"
     msg['From'] = SENDER_EMAIL
-    msg['To'] = RECEIVER_EMAIL
+    msg['To'] = ", ".join(receiver_list)
     msg.attach(MIMEText(html_body, 'html'))
 
     try:
         with smtplib.SMTP("smtp.gmail.com", 587) as server:
             server.starttls()
             server.login(SENDER_EMAIL, SENDER_PASSWORD)
-            server.send_message(msg)
-        print("[+] 뉴스레터가 성공적으로 발송되었습니다!")
+            server.send_message(msg, to_addrs=receiver_list)
+        print(f"[+] 총 {len(receiver_list)}명에게 발송 성공!")
     except Exception as e:
         print(f"[!] 메일 발송 실패: {e}")
 
@@ -144,3 +145,4 @@ if __name__ == "__main__":
         send_email(email_content)
     else:
         print("[!] 수집된 뉴스 데이터가 없어 발송을 중단합니다.")
+
