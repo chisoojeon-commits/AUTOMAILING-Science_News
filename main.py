@@ -74,11 +74,24 @@ def get_ai_summary(news_data):
         summarized_articles = []
         for art in articles:
             prompt = f"다음 뉴스 기사를 읽고 2문장(한국어)로 핵심만 요약해줘.\n제목: {art['title']}\n내용: {art['desc']}"
+            # try:
+            #     response = model.generate_content(prompt)
+            #     art['ai_summary'] = response.text.strip()
+            # except:
+            #     art['ai_summary'] = "요약을 생성하지 못했습니다. 링크를 참조해 주세요."
             try:
+                time.sleep(1)
                 response = model.generate_content(prompt)
-                art['ai_summary'] = response.text.strip()
-            except:
-                art['ai_summary'] = "요약을 생성하지 못했습니다. 링크를 참조해 주세요."
+                # art['ai_summary'] = response.text.strip()
+                if response.candidates and response.candidates[0].content.parts:
+                    art['ai_summary'] = response.text.strip()
+                else:
+                    # 3. 만약 차단되었다면 이유 확인 (선택 사항)
+                    reason = response.prompt_feedback.block_reason
+                    art['ai_summary'] = f"AI 정책에 의해 요약이 제한되었습니다. (사유: {reason})"
+            except Exception as e:
+                print(f"Error for '{art['title']}': {e}")
+                art['ai_summary'] = "요약을 생성하지 못했습니다. 링크를 참조해 주세요."            
             summarized_articles.append(art)
         summarized_data[category] = summarized_articles
     return summarized_data
@@ -145,4 +158,5 @@ if __name__ == "__main__":
         send_email(email_content)
     else:
         print("[!] 수집된 뉴스 데이터가 없어 발송을 중단합니다.")
+
 
