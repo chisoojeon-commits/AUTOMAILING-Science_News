@@ -6,6 +6,7 @@ import urllib3
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from datetime import datetime
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
 import os
 
 # SSL 경고 무시
@@ -26,7 +27,10 @@ SMTP_PORT = 587
 # 가장 안정적인 뉴스 소스로 변경
 NEWS_SOURCES = {
     "국내 주요 과학 소식 (Google News)": "https://news.google.com/rss/headlines/section/topic/SCIENCE?hl=ko&gl=KR&ceid=KR:ko",
-    "해외 과학 (ScienceDaily)": "https://www.sciencedaily.com/rss/all.xml"
+    "해외 과학 (ScienceDaily)": "https://www.sciencedaily.com/rss/all.xml",
+    # --- 새로 추가할 핫 이슈 소스 ---
+    "글로벌 이슈 (Nature)": "https://www.nature.com/nature.rss",
+    "IT/AI 트렌드 (MIT Tech Review)": "https://www.technologyreview.com/feed/"
 }
 
 
@@ -62,38 +66,54 @@ def fetch_news():
 
 
 def get_ai_summary(news_data):
-    """Gemini AI를 통한 핵심 요약 생성"""
+    """Gemini AI를 통한 핵심 요약 생성 (안정성 강화 버전)"""
     print("[*] AI 요약 생성 중...")
     genai.configure(api_key=GEMINI_API_KEY)
-    # model = genai.GenerativeModel('gemini-1.5-flash')  # 속도가 빠른 flash 모델 권장
-    model = genai.GenerativeModel('gemini-2.5-flash')  # 속도가 빠른 flash 모델 권장
 
+    # 1. 안전 설정 해제: 뉴스 요약 시 차단을 최소화하기 위해 모든 필터를 끕니다.
+    safety_settings = {
+        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+    }
+
+    # 2. 시스템 지침 추가: 모델이 뉴스 요약 전문가로서 행동하도록 설정
+    model = genai.GenerativeModel(
+        model_name='gemini-2.5-flash',  # 혹은 'gemini-1.5-flash'
+        safety_settings=safety_settings,
+        system_instruction="너는 전문 과학 뉴스 요약가야. 주어진 뉴스 기사의 핵심 내용을 한국어로 정확하게 2문장으로 요약해줘."
+    )
 
     summarized_data = {}
     for category, articles in news_data.items():
         summarized_articles = []
         for art in articles:
-            prompt = f"다음 뉴스 기사를 읽고 2문장(한국어)로 핵심만 요약해줘.\n제목: {art['title']}\n내용: {art['desc']}"
-            # try:
-            #     response = model.generate_content(prompt)
-            #     art['ai_summary'] = response.text.strip()
-            # except:
-            #     art['ai_summary'] = "요약을 생성하지 못했습니다. 링크를 참조해 주세요."
+            # 내용이 너무 짧거나 없는 경우 처리
+            text_to_summarize = art.get('desc', '') or art.get('title', '')
+            prompt = f"제목: {art['title']}\n내용: {text_to_summarize}"
+
             try:
-                time.sleep(1)
+                time.sleep(1.5)  # Rate Limit 방지를 위해 대기 시간 소폭 증가
                 response = model.generate_content(prompt)
-                # art['ai_summary'] = response.text.strip()
-                if response.candidates and response.candidates[0].content.parts:
-                    art['ai_summary'] = response.text.strip()
+
+                # 3. 안전한 텍스트 추출 방식
+                # response.text는 차단된 경우 에러를 발생시키므로 직접 검사
+                if response.candidates and len(response.candidates[0].content.parts) > 0:
+                    art['ai_summary'] = response.candidates[0].content.parts[0].text.strip()
                 else:
-                    # 3. 만약 차단되었다면 이유 확인 (선택 사항)
-                    reason = response.prompt_feedback.block_reason
-                    art['ai_summary'] = f"AI 정책에 의해 요약이 제한되었습니다. (사유: {reason})"
+                    # 차단된 경우 사유 파악
+                    finish_reason = response.candidates[0].finish_reason if response.candidates else "Unknown"
+                    art['ai_summary'] = f"AI 요약이 제한되었습니다. (사유: {finish_reason})"
+                    print(f"[!] 요약 제한됨: {art['title']} / 사유: {finish_reason}")
+
             except Exception as e:
-                print(f"Error for '{art['title']}': {e}")
-                art['ai_summary'] = "요약을 생성하지 못했습니다. 링크를 참조해 주세요."            
+                print(f"[!] Error for '{art['title']}': {str(e)}")
+                art['ai_summary'] = "요약을 생성하지 못했습니다. 링크를 참조해 주세요."
+
             summarized_articles.append(art)
         summarized_data[category] = summarized_articles
+
     return summarized_data
 
 
@@ -158,5 +178,6 @@ if __name__ == "__main__":
         send_email(email_content)
     else:
         print("[!] 수집된 뉴스 데이터가 없어 발송을 중단합니다.")
+
 
 
