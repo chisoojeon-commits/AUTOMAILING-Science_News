@@ -139,7 +139,7 @@ def get_ai_summary(news_data):
 
         try:
             # [중요] 429 에러 방지: 호출 전 15초 대기 (무료 티어 분당 5회 제한 준수)
-            time.sleep(5)
+            time.sleep(15)
             response = model.generate_content(batch_prompt)
 
             # AI 응답이 정상인지 확인
@@ -199,4 +199,5 @@ if __name__ == "__main__":
         send_email(email_content)
     else:
         print("[!] 수집된 뉴스 데이터가 없어 발송을 중단합니다.")
+
 
