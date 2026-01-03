@@ -71,8 +71,10 @@ def fetch_news():
 
 def build_html_template(data):
     """세련된 뉴스레터 양식 생성"""
-    today = datetime.now().strftime("%Y-%m-%d")
-
+    # today = datetime.now().strftime("%Y-%m-%d")
+    KST = timezone(timedelta(hours=9))
+    today = datetime.now(KST).strftime("%Y-%m-%d")
+    
     html = f"""
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden; color: #333;">
         <div style="background-color: #002d5b; color: #ffffff; padding: 30px 20px; text-align: center;">
@@ -199,5 +201,6 @@ if __name__ == "__main__":
         send_email(email_content)
     else:
         print("[!] 수집된 뉴스 데이터가 없어 발송을 중단합니다.")
+
 
 
