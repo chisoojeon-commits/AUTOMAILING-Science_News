@@ -112,7 +112,8 @@ def get_ai_summary(news_data):
 
     # 1. 모델 명칭 설정 (아까 확인된 2.5-flash를 사용하되, 앞에 'models/'를 떼고 입력해 보세요)
     # 만약 계속 NotFound가 뜨면 list_models에서 나온 전체 이름(models/...)을 넣어보세요.
-    MODEL_NAME = 'gemini-2.5-flash'
+    # MODEL_NAME = 'gemini-2.5-flash'
+    MODEL_NAME = 'gemini-3-flash-preview'
 
     safety_settings = {
         HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
@@ -201,6 +202,7 @@ if __name__ == "__main__":
         send_email(email_content)
     else:
         print("[!] 수집된 뉴스 데이터가 없어 발송을 중단합니다.")
+
 
 
 
