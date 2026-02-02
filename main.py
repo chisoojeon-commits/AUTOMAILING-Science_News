@@ -126,7 +126,8 @@ def get_ai_summary(news_data):
         model_name=MODEL_NAME,
         safety_settings=safety_settings,
         generation_config={"response_mime_type": "application/json"},
-        system_instruction="전문 과학 뉴스 요약가로서, 뉴스 리스트를 JSON 형식으로 요약해라. 반드시 {'summaries': [{'id': 0, 'summary': '...'}]} 구조를 지켜라."
+        # system_instruction="전문 과학 뉴스 요약가로서, 뉴스 리스트를 JSON 형식으로 요약해라. 반드시 {'summaries': [{'id': 0, 'summary': '...'}]} 구조를 지켜라."
+        system_instruction="전문 과학 뉴스 요약가로서 생명공학, 인공지능, 우주과학 분야의 기사를 우선순위로 두고, 전문 용어는 주석을 달거나 쉬운 표현으로 풀어서 요약해라, 뉴스 리스트를 JSON 형식으로 요약해라. 반드시 {'summaries': [{'id': 0, 'summary': '...'}]} 구조를 지켜라."
     )
 
     summarized_data = {}
@@ -202,6 +203,7 @@ if __name__ == "__main__":
         send_email(email_content)
     else:
         print("[!] 수집된 뉴스 데이터가 없어 발송을 중단합니다.")
+
 
 
 
